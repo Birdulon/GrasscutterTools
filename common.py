@@ -17,7 +17,7 @@ def open_read(filename: str, local=False) -> TextIO:
 
 def open_write(filename: str, local=False) -> TextIO:
     path = '' if local else GC_PATH
-    return open(GC_PATH + filename, 'w', encoding='utf-8', newline='\n')
+    return open(path + filename, 'w', encoding='utf-8', newline='\n')
 
 
 re_handbook = re.compile(r'(\d+) : (.*)')
@@ -55,12 +55,19 @@ def fmt_json(filename):
         f.write('[\n' + ',\n'.join(entry_strings) + '\n]')
 
 
-def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stripped_keys=[], flatten_lists=True) -> dict:
+def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stripped_keys=[], flatten_lists=True, key_hacks={}, truncate_floats=True) -> dict:
+    def truncate(f: float):
+        if -0.0001 < f < 0.0001:
+            return 0
+        return f
+
     def squish_xyz(data: dict):
         keys = set(data.keys())
         if len(keys) > 0:
-            for xyz in (['x', 'y', 'z'], ['w', 'x', 'y', 'z'], ['propType', 'propValue']):
+            for xyz in (['x', 'y', 'z'], ['w', 'x', 'y', 'z']):  #, ['propType', 'propValue']):
                 if len(keys - set(xyz)) == 0:
+                    if truncate_floats:
+                        return tuple(truncate(data.get(k, 0)) for k in xyz)
                     return tuple(data.get(k, 0) for k in xyz)
         return False
     
@@ -71,6 +78,8 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
             return tuple((k, to_tuple_of_tuples(v)) for k,v in data.items())
         elif isinstance(data, list):
             return tuple(to_tuple_of_tuples(v) for v in data)
+        elif isinstance(data, float) and truncate_floats:
+            return truncate(data)
         else:
             return data
 
@@ -80,6 +89,9 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
             p = prefix + key
             if key in stripped_keys:
                 continue
+            if p in key_hacks:
+                p, value = key_hacks[p](value)  # A bit evil but whatever >:)
+                key = p
             if isinstance(value, dict):
                 if flatten_xyz and (squish := squish_xyz(value)):
                     output[p] = squish
@@ -95,6 +107,8 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
                             output[f'{p}.{i}'] = val
                 else:
                     output[p] = to_tuple_of_tuples(value)
+            elif isinstance(data, float) and truncate_floats:
+                output[p] = truncate(value)
             else:
                 output[p] = value
         return output
@@ -145,3 +159,47 @@ def table_to_dict(lua_table) -> dict:
                 output[k] = table_to_dict(v)
     return output
 
+
+def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=False) -> str:
+    def wrap(contents: list, indent: int):
+        total_len = sum(len(s) for s in contents)
+        if total_len < maxline:
+            return ','.join(contents)
+        else:
+            pre: str = '\n' + '\t' * indent
+            pre2: str = '\n' + '\t' * (indent + 1)
+            return pre2 + (','+pre2).join(contents) + pre
+    
+    def not_nan(v):
+        if isinstance(v, (np.number, float)):
+            return v == v
+        return True
+
+    def encode(obj, indent=0):
+        if isinstance(obj, list) or isinstance(obj, tuple):
+            contents = [encode(o, indent+1) for o in obj]
+            return '[' + wrap(contents, indent) + ']'
+        if isinstance(obj, dict):
+            contents = [f'{encode(k)}:{spacing}{encode(v, indent+1)}' for k,v in obj.items() if not_nan(v)]
+            return '{' + wrap(contents, indent) + '}'
+        if obj != obj:
+            if nan_to_null:
+                return 'null'
+            else:
+                return '>>>>>>>>>>>>>>>>>>>>>AAAAAAAA A NAN AAAAAAAAAAAAAAAAA<<<<<<<<<<<<<<<<<<<<<<<' + str(type(obj))
+        if isinstance(obj, bool):
+            return 'true' if obj else 'false'
+        if isinstance(obj, str):
+            if obj == 'zChildren':
+                # return '"Children"'
+                return '"spawns"'
+            return f'"{obj}"'
+        if isinstance(obj, int):
+            return str(obj)
+        if isinstance(obj, float):
+            out = str(obj)
+            if out.endswith('.0'):
+                return out[:-2]
+            return out
+        return str(obj)
+    return encode(obj, starting_indent)
