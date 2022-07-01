@@ -1,0 +1,12 @@
+
+// 130_000 seeds
+// 131_000 fish
+// 140_000 wings
+// 141_000 music discs
+// 210_000 namecards
+// 220_000 gadgets
+// 221_000 -> 221_038 crafting recipes
+// 222_001 -> ??? unlocks realm
+// 223_000 -> 223012 fireworks
+// 340_000 costumes
+// 350_000 -> 394_505 furniture
