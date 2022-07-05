@@ -162,7 +162,11 @@ def table_to_dict(lua_table) -> dict:
     return output
 
 
-def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=False) -> str:
+def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=False, sort_overrides=None) -> str:
+    def sort_key(value):
+        k, v = value
+        k = sort_overrides.get(k, k)
+        return k, v
     def wrap(contents: list, indent: int):
         total_len = sum(len(s) for s in contents)
         if total_len < maxline:
@@ -182,7 +186,8 @@ def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=Fal
             contents = [encode(o, indent+1) for o in obj]
             return '[' + wrap(contents, indent) + ']'
         if isinstance(obj, dict):
-            contents = [f'{encode(k, key=True)}:{spacing}{encode(v, indent+1)}' for k,v in obj.items() if not_nan(v)]
+            iterator = sorted(obj.items(), key=sort_key) if sort_overrides else obj.items()
+            contents = [f'{encode(k, key=True)}:{spacing}{encode(v, indent+1)}' for k,v in iterator if not_nan(v)]
             return '{' + wrap(contents, indent) + '}'
         if obj != obj:
             if nan_to_null:
