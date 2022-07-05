@@ -50,7 +50,7 @@ def fmt_json(filename):
         pos_d = d.get('motion_info', {}).get('pos', {})
         return tuple(pos_d.get(x, 0) for x in 'xyz')
     data = sorted(data, key=get_pos)
-    with open(f'{filename.rpartition(".")[0]}.newlines.json', 'w', encoding='utf-8', newline='\n') as f:
+    with open_write(f'{filename.rpartition(".")[0]}.newlines.json', True) as f:
         entry_strings = [json.dumps(entry, ensure_ascii=False).replace(' ', '') for entry in data]
         f.write('[\n' + ',\n'.join(entry_strings) + '\n]')
 

@@ -104,9 +104,9 @@ data_flat = sorted(data_flat_unsorted, key=lambda x: (len(x), x.get('gadget.gadg
 # s = json.dumps(df4, ensure_ascii=False)
 # s2 = s.replace('},', '},\n')
 # s3 = s2.replace(' ', '').replace('"zz_children"', '\n"zz"').replace('configId', 'c').replace('groupId', 'g')
-with open('3.flatdense.json', 'w', encoding='utf-8') as f:
-    f.write(s3)
-        
+# with open_write('3.flatdense.json', True) as f:
+#     f.write(s3)
+
 # o = turn_progenitors_into_groups(load_json('3.df4.json'))
 
 def format_dump(input) -> str:
@@ -149,7 +149,7 @@ def format_dump(input) -> str:
         else:
             return [prefix + str(data)]
     return '\n'.join(format_d(input))
-# with open('3.flatdense2.json', 'w', encoding='utf-8') as f:
+# with open_write('3.flatdense2.json', True) as f:
     # f.write(format_dump(df4))
 
 
