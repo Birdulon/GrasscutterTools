@@ -70,7 +70,7 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
                         return tuple(truncate(data.get(k, 0)) for k in xyz)
                     return tuple(data.get(k, 0) for k in xyz)
         return False
-    
+
     def to_tuple_of_tuples(data):
         if isinstance(data, dict):
             if squish := squish_xyz(data):
@@ -84,6 +84,8 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
             return data
 
     def flatten(data: dict, prefix=''):
+        if not isinstance(data, dict):
+            return data
         output = {}
         for key, value in data.items():
             p = prefix + key
@@ -169,18 +171,18 @@ def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=Fal
             pre: str = '\n' + '\t' * indent
             pre2: str = '\n' + '\t' * (indent + 1)
             return pre2 + (','+pre2).join(contents) + pre
-    
+
     def not_nan(v):
         if isinstance(v, (np.number, float)):
             return v == v
         return True
 
-    def encode(obj, indent=0):
+    def encode(obj, indent=0, key=False):
         if isinstance(obj, list) or isinstance(obj, tuple):
             contents = [encode(o, indent+1) for o in obj]
             return '[' + wrap(contents, indent) + ']'
         if isinstance(obj, dict):
-            contents = [f'{encode(k)}:{spacing}{encode(v, indent+1)}' for k,v in obj.items() if not_nan(v)]
+            contents = [f'{encode(k, key=True)}:{spacing}{encode(v, indent+1)}' for k,v in obj.items() if not_nan(v)]
             return '{' + wrap(contents, indent) + '}'
         if obj != obj:
             if nan_to_null:
@@ -188,18 +190,21 @@ def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=Fal
             else:
                 return '>>>>>>>>>>>>>>>>>>>>>AAAAAAAA A NAN AAAAAAAAAAAAAAAAA<<<<<<<<<<<<<<<<<<<<<<<' + str(type(obj))
         if isinstance(obj, bool):
-            return 'true' if obj else 'false'
+            out = 'true' if obj else 'false'
+            return f'"{out}"' if key else out
         if isinstance(obj, str):
             if obj == 'zChildren':
                 # return '"Children"'
                 return '"spawns"'
             return f'"{obj}"'
         if isinstance(obj, int):
-            return str(obj)
+            out = str(obj)
+            return f'"{out}"' if key else out
         if isinstance(obj, float):
             out = str(obj)
             if out.endswith('.0'):
-                return out[:-2]
-            return out
-        return str(obj)
+                out = out[:-2]
+            return f'"{out}"' if key else out
+        out = str(obj)
+        return f'"{out}"' if key else out
     return encode(obj, starting_indent)
