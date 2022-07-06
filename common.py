@@ -119,6 +119,24 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
     return flatten(data, prefix)
 
 
+def _semi_flatten(data):
+    if isinstance(data, list):
+        return [flatten_json(d, flatten_xyz=True, flatten_lists=False) for d in data]
+    elif isinstance(data, dict):
+        return flatten_json(data, flatten_xyz=True, flatten_lists=False)
+    else:
+        return data
+
+def semi_flatten(data, skip_tiers=0):
+    callback = _semi_flatten if skip_tiers < 1 else lambda d: semi_flatten(d, skip_tiers-1)
+    if isinstance(data, list):
+        return [callback(d) for d in data]
+    elif isinstance(data, dict):
+        return {k:callback(v) for k,v in data.items()}
+    else:
+        return data
+
+
 def unflatten_json(data: dict) -> dict:
     output = {}
     def add_key(key: list, d: dict, value):

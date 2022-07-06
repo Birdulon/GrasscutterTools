@@ -73,30 +73,6 @@ with open_write(output_path + f'luas.scenes.full_globals.json', True) as file:
 print(f'Total errors: {len(lua_tables["errors"])}')
 
 
-def _semi_flatten(gadgets):
-    if isinstance(gadgets, list):
-        return [flatten_json(g, flatten_xyz=True, flatten_lists=False) for g in gadgets]
-    elif isinstance(gadgets, dict):
-        return flatten_json(gadgets, flatten_xyz=True, flatten_lists=False)
-    else:
-        return gadgets
-
-def semi_flatten(data, skip_tiers=0):
-    if skip_tiers > 0:
-        if isinstance(data, list):
-            return [semi_flatten(d, skip_tiers-1) for d in data]
-        elif isinstance(data, dict):
-            return {k:semi_flatten(v, skip_tiers-1) for k,v in data.items()}
-        else:
-            return data
-    if isinstance(data, dict):
-        return {key: _semi_flatten(gadgets) for key, gadgets in data.items()}
-    elif isinstance(data, list):
-        return [_semi_flatten(gadgets) for gadgets in data]
-    else:
-        return data
-
-
 for (name, skips) in [(k, 0) for k in lua_tables.keys()] + [('full_globals', 1)]:
     table_decoded = load_json(output_path + f'luas.scenes.{name}.json', True)
     with open_write(output_path + f'flat.luas.scenes.{name}.lua.json', True) as file:
