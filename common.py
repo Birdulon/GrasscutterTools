@@ -1,4 +1,5 @@
 import json
+from numbers import Number
 import os
 import re
 import pandas as pd
@@ -143,6 +144,8 @@ def load_textmaps():
 
 
 def table_to_dict(lua_table) -> dict:
+    if isinstance(lua_table, Number) or isinstance(lua_table, str) or isinstance(lua_table, bool):
+        return lua_table
     if not lua_table:
         return
     if len(lua_table) > 0:  # Only array tables have working length in lupa
