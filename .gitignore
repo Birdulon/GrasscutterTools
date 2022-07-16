@@ -1,3 +1,4 @@
+lua_jsons/
 3.*json
 *.xlsx
 __pycache__

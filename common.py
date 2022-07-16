@@ -39,6 +39,12 @@ def load_json(filename: str, local=False) -> dict:
         return json.load(file)
 
 
+def load_json_folder(path: str, local=False):
+    if not local:
+        path = GC_PATH + path
+    return {f.removesuffix('.json'): load_json(path+f, local=True) for f in os.listdir(path)}
+
+
 def save_json(data: dict, filename: str, local=False, indent=INDENT, **kwargs) -> None:
     with open_write(filename, local=local) as file:
         json.dump(data, file, ensure_ascii=False, indent=indent, **kwargs)
@@ -85,6 +91,8 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
             return data
 
     def flatten(data: dict, prefix=''):
+        if isinstance(data, (list, tuple)):
+            return [flatten(d, prefix) for d in data]
         if not isinstance(data, dict):
             return data
         output = {}
@@ -119,16 +127,8 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
     return flatten(data, prefix)
 
 
-def _semi_flatten(data):
-    if isinstance(data, list):
-        return [flatten_json(d, flatten_xyz=True, flatten_lists=False) for d in data]
-    elif isinstance(data, dict):
-        return flatten_json(data, flatten_xyz=True, flatten_lists=False)
-    else:
-        return data
-
 def semi_flatten(data, skip_tiers=0):
-    callback = _semi_flatten if skip_tiers < 1 else lambda d: semi_flatten(d, skip_tiers-1)
+    callback = (lambda d: flatten_json(d, flatten_xyz=True, flatten_lists=False)) if skip_tiers < 1 else (lambda d: semi_flatten(d, skip_tiers-1))
     if isinstance(data, list):
         return [callback(d) for d in data]
     elif isinstance(data, dict):
@@ -183,12 +183,12 @@ def table_to_dict(lua_table) -> dict:
     return output
 
 
-def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=False, sort_overrides=None) -> str:
+def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=False, sort_overrides=None, sort_ints=False) -> str:
     def sort_key(value):
         k, v = value
         k = sort_overrides.get(k, k)
         return k, v
-    def wrap(contents: list, indent: int):
+    def wrap(contents: list, indent: int) -> str:
         total_len = sum(len(s) for s in contents)
         if total_len < maxline:
             return ','.join(contents)
@@ -197,17 +197,28 @@ def encode_json(obj, starting_indent=0, maxline=180, spacing='', nan_to_null=Fal
             pre2: str = '\n' + '\t' * (indent + 1)
             return pre2 + (','+pre2).join(contents) + pre
 
-    def not_nan(v):
+    def not_nan(v) -> bool:
         if isinstance(v, (np.number, float)):
             return v == v
         return True
+    
+    def dict_of_ints(d: dict) -> bool:
+        if not sort_ints:
+            return False
+        try:
+            [int(key) for key in d.keys()]
+            return True
+        except:
+            return False
 
-    def encode(obj, indent=0, key=False):
+    def encode(obj, indent=0, key=False) -> str:
         if isinstance(obj, list) or isinstance(obj, tuple):
             contents = [encode(o, indent+1) for o in obj]
             return '[' + wrap(contents, indent) + ']'
         if isinstance(obj, dict):
-            iterator = sorted(obj.items(), key=sort_key) if sort_overrides else obj.items()
+            iterator = (sorted(obj.items(), key=sort_key) if sort_overrides
+                        else sorted(obj.items(), key=lambda x: int(x[0])) if dict_of_ints(obj)
+                        else obj.items())
             contents = [f'{encode(k, key=True)}:{spacing}{encode(v, indent+1)}' for k,v in iterator if not_nan(v)]
             return '{' + wrap(contents, indent) + '}'
         if obj != obj:

@@ -1,4 +1,6 @@
 from common import *
+output_path = 'lua_jsons/'
+
 
 class lua_tools:
     module_not_found = re.compile(r"module '(.*?)' not found")
@@ -63,7 +65,6 @@ for root, dirs, files in os.walk(path):
                 table[key] = table_to_dict(t)
 
 
-output_path = 'lua_jsons/'
 os.makedirs(output_path, exist_ok=True)
 for name, table in lua_tables.items():
     with open_write(output_path + f'luas.scenes.{name}.json', True) as file:
