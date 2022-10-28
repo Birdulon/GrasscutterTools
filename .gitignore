@@ -1,4 +1,5 @@
 lua_jsons/
+resources*/
 3.*json
 *.xlsx
 __pycache__
