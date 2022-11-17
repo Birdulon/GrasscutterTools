@@ -62,7 +62,7 @@ def fmt_json(filename):
         f.write('[\n' + ',\n'.join(entry_strings) + '\n]')
 
 
-def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stripped_keys=[], flatten_lists=True, key_hacks={}, truncate_floats=True) -> dict:
+def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stripped_keys=[], flatten_lists=True, key_hacks={}, truncate_floats=True, stripped_values=[]) -> dict:
     def truncate(f: float):
         if -0.0001 < f < 0.0001:
             return 0
@@ -98,7 +98,7 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
         output = {}
         for key, value in data.items():
             p = prefix + key
-            if key in stripped_keys:
+            if (key in stripped_keys) or (value in stripped_values):
                 continue
             if p in key_hacks:
                 p, value = key_hacks[p](value)  # A bit evil but whatever >:)
@@ -112,6 +112,8 @@ def flatten_json(data: dict, prefix='', flatten_keys=[], flatten_xyz=False, stri
             elif isinstance(value, list):
                 if flatten_lists:
                     for i,val in enumerate(value):
+                        if val in stripped_values:
+                            continue
                         if isinstance(val, dict):
                             output.update(flatten(val, f'{p}.{i}.'))
                         else:
